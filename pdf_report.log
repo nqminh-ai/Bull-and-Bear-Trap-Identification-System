@@ -1,0 +1,7 @@
+2026-05-22 08:59:26,093 [INFO] === CHẾ ĐỘ LẬP LỊCH TỰ ĐỘNG ===
+2026-05-22 08:59:26,094 [ERROR] Cài: pip install apscheduler
+2026-05-22 09:00:24,118 [INFO] === CHẾ ĐỘ LẬP LỊCH TỰ ĐỘNG ===
+2026-05-22 09:00:24,229 [INFO] Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-05-22 09:00:24,229 [INFO] Lập lịch: 16:15 Thứ 2 - Thứ 6
+2026-05-22 09:00:24,230 [INFO] Added job "schedule_daily_report.<locals>.job" to job store "default"
+2026-05-22 09:00:24,230 [INFO] Scheduler started
