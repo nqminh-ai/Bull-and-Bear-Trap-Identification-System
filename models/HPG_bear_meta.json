@@ -1,0 +1,9 @@
+{
+  "auc_roc": 0.625,
+  "precision_trap": 0.3333,
+  "recall_trap": 0.5,
+  "f1_trap": 0.4,
+  "accuracy": 0.5,
+  "trained_at": "2026-05-23T15:20:48.749516",
+  "version": "models\\versions\\HPG_bear_20260523_152048.pkl"
+}

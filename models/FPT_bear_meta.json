@@ -1,0 +1,9 @@
+{
+  "auc_roc": 0.6,
+  "precision_trap": 0.0,
+  "recall_trap": 0.0,
+  "f1_trap": 0.0,
+  "accuracy": 0.6667,
+  "trained_at": "2026-05-23T15:20:43.380022",
+  "version": "models\\versions\\FPT_bear_20260523_152043.pkl"
+}

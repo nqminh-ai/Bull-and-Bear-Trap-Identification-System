@@ -1,0 +1,9 @@
+{
+  "auc_roc": 0.875,
+  "precision_trap": 0.5,
+  "recall_trap": 1.0,
+  "f1_trap": 0.6667,
+  "accuracy": 0.6667,
+  "trained_at": "2026-05-23T15:20:40.583851",
+  "version": "models\\versions\\CTG_bear_20260523_152040.pkl"
+}

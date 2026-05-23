@@ -1,0 +1,9 @@
+{
+  "auc_roc": 0.5,
+  "precision_trap": 0.5,
+  "recall_trap": 0.5,
+  "f1_trap": 0.5,
+  "accuracy": 0.6,
+  "trained_at": "2026-05-23T15:20:51.464625",
+  "version": "models\\versions\\VCB_bull_20260523_152051.pkl"
+}

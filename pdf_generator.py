@@ -21,6 +21,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from jinja2 import Environment, BaseLoader
+from custom_ui import get_pdf_html_template
 
 try:
     import pdfkit
@@ -76,149 +77,9 @@ VN30_SYMBOLS = [
 ]
 
 # ============================================================
-# TEMPLATE HTML (JINJA2)
+# TEMPLATE HTML — lấy từ custom_ui.py (white theme thống nhất)
 # ============================================================
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-<meta charset="UTF-8">
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; background:#fff; color:#1a1a2e; font-size:13px; line-height:1.6; }
-  .page { max-width:900px; margin:0 auto; padding:30px 40px; }
-  .report-header {
-    background: linear-gradient(135deg, #0d1117 0%, #1c2128 100%);
-    color:#e6edf3; padding:28px 36px; border-radius:12px;
-    margin-bottom:28px; display:flex; justify-content:space-between; align-items:center;
-  }
-  .report-header h1 { font-size:22px; font-weight:700; }
-  .report-header .subtitle { font-size:13px; color:#8b949e; margin-top:4px; }
-  .report-header .timestamp { text-align:right; font-size:12px; color:#8b949e; }
-  .report-header .timestamp strong { font-size:16px; color:#d29922; display:block; }
-  .section-title {
-    font-size:15px; font-weight:600; color:#0d1117;
-    margin:24px 0 12px; padding-bottom:6px; border-bottom:2px solid #e1e4e8;
-  }
-  .summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
-  .metric-box { border:1px solid #e1e4e8; border-radius:8px; padding:14px; text-align:center; }
-  .metric-box.danger  { border-left:4px solid #cf222e; background:#fff0f0; }
-  .metric-box.warning { border-left:4px solid #d29922; background:#fffbea; }
-  .metric-box.safe    { border-left:4px solid #1a7f37; background:#f0fff4; }
-  .metric-box.neutral { border-left:4px solid #0969da; background:#f0f8ff; }
-  .metric-label { font-size:11px; color:#6e7781; text-transform:uppercase; margin-bottom:6px; }
-  .metric-value { font-size:22px; font-weight:700; color:#1a1a2e; }
-  .metric-sub   { font-size:11px; color:#6e7781; margin-top:4px; }
-  table { width:100%; border-collapse:collapse; margin-bottom:20px; font-size:12px; }
-  thead { background:#0d1117; color:#e6edf3; }
-  thead th { padding:10px 12px; text-align:left; font-weight:600; }
-  tbody tr:nth-child(even) { background:#f6f8fa; }
-  tbody td { padding:8px 12px; border-bottom:1px solid #e1e4e8; }
-  .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
-  .badge-danger  { background:#ff818266; color:#cf222e; }
-  .badge-safe    { background:#abf2bc66; color:#1a7f37; }
-  .badge-warning { background:#ffe08566; color:#9a6700; }
-  .chart-container { border:1px solid #e1e4e8; border-radius:8px; overflow:hidden; margin-bottom:20px; }
-  .chart-container img { width:100%; display:block; }
-  .chart-caption { font-size:11px; color:#6e7781; text-align:center; padding:8px; background:#f6f8fa; border-top:1px solid #e1e4e8; }
-  .alert { padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:12px; }
-  .alert-danger { background:#fff0f0; border:1px solid #cf222e; color:#cf222e; }
-  .report-footer { margin-top:32px; padding-top:16px; border-top:1px solid #e1e4e8; font-size:11px; color:#8b949e; text-align:center; }
-</style>
-</head>
-<body>
-<div class="page">
-  <div class="report-header">
-    <div>
-      <h1>⚠️ BÁO CÁO PHÂN TÍCH BULL TRAP</h1>
-      <div class="subtitle">Hệ thống phát hiện bẫy giá VN30 — ML Powered</div>
-    </div>
-    <div class="timestamp">
-      <strong>{{ report_date }}</strong>
-      Tạo lúc: {{ generated_at }}
-    </div>
-  </div>
-
-  <div class="section-title">📊 TỔNG QUAN PHIÊN PHÂN TÍCH</div>
-  <div class="summary-grid">
-    <div class="metric-box neutral">
-      <div class="metric-label">Số mã phân tích</div>
-      <div class="metric-value">{{ total_symbols }}</div>
-      <div class="metric-sub">mã VN30</div>
-    </div>
-    <div class="metric-box danger">
-      <div class="metric-label">Cảnh báo Bull Trap</div>
-      <div class="metric-value">{{ high_risk_count }}</div>
-      <div class="metric-sub">xác suất > 50%</div>
-    </div>
-    <div class="metric-box warning">
-      <div class="metric-label">Cần theo dõi</div>
-      <div class="metric-value">{{ medium_risk_count }}</div>
-      <div class="metric-sub">xác suất 30–50%</div>
-    </div>
-    <div class="metric-box safe">
-      <div class="metric-label">Tín hiệu an toàn</div>
-      <div class="metric-value">{{ low_risk_count }}</div>
-      <div class="metric-sub">xác suất < 30%</div>
-    </div>
-  </div>
-
-  {% if high_risk_symbols %}
-  <div class="alert alert-danger">
-    🚨 <strong>CẢNH BÁO:</strong> Nguy cơ Bull Trap cao:
-    <strong>{{ high_risk_symbols | join(', ') }}</strong>
-  </div>
-  {% endif %}
-
-  {% for chart_info in charts %}
-  <div class="section-title">📈 {{ chart_info.symbol }} — Chi tiết</div>
-  <div class="chart-container">
-    <img src="data:image/png;base64,{{ chart_info.chart_b64 }}">
-    <div class="chart-caption">
-      Phiên: {{ chart_info.latest_date }} | Xác suất Bull Trap: {{ chart_info.prob_str }}
-    </div>
-  </div>
-  {% endfor %}
-
-  <div class="section-title">📋 BẢNG KẾT QUẢ</div>
-  <table>
-    <thead>
-      <tr>
-        <th>Mã CP</th><th>Giá đóng cửa</th><th>RSI(14)</th>
-        <th>Volume Ratio</th><th>Phân kỳ OBV</th>
-        <th>Xác suất Bẫy</th><th>Rủi ro</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for row in table_rows %}
-      <tr>
-        <td><strong>{{ row.symbol }}</strong></td>
-        <td>{{ row.close }}</td>
-        <td>{{ row.rsi }}</td>
-        <td>{{ row.vol_ratio }}</td>
-        <td>{{ '⚡ CÓ' if row.divergence else '—' }}</td>
-        <td><strong>{{ row.prob_str }}</strong></td>
-        <td><span class="badge badge-{{ row.risk_class }}">{{ row.risk_label }}</span></td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-
-  <div class="section-title">📝 GHI CHÚ</div>
-  <p style="font-size:12px;color:#444;line-height:1.7;">
-    Mô hình <strong>XGBoost/RandomForest</strong> huấn luyện trên dữ liệu lịch sử VN30.
-    Features: RSI(14), MA20, Volume Ratio, Upper Shadow Rejection, Doji, OBV Divergence.
-    Bull Trap = giá phá MA20 nhưng T+5 thấp hơn giá mua.<br><br>
-    <em>⚠️ Báo cáo mang tính tham khảo, không phải khuyến nghị đầu tư.</em>
-  </p>
-
-  <div class="report-footer">
-    Bull Trap Detector | Server: NGUYEN_MINH | DB: ProjectADY_StockDB | {{ generated_at }}
-  </div>
-</div>
-</body>
-</html>
-"""
+HTML_TEMPLATE = get_pdf_html_template()
 
 
 # ============================================================
@@ -269,6 +130,11 @@ def fetch_latest_data(symbol: str, lookback_days: int = 90) -> pd.DataFrame:
     df   = pd.read_sql(query, conn)
     conn.close()
 
+    df = df.rename(columns={
+        "TradingDate": "Date", "OpenPrice": "Open",
+        "HighPrice": "High",   "LowPrice": "Low",
+        "ClosePrice": "Close", "TotalVolume": "Volume",
+    })
     df["Date"] = pd.to_datetime(df["Date"])
     return df.set_index("Date").sort_index()
 

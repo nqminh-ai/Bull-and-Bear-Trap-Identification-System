@@ -1,0 +1,9 @@
+{
+  "auc_roc": 0.1667,
+  "precision_trap": 0.25,
+  "recall_trap": 0.5,
+  "f1_trap": 0.3333,
+  "accuracy": 0.2,
+  "trained_at": "2026-05-23T15:20:46.106615",
+  "version": "models\\versions\\GVR_bear_20260523_152046.pkl"
+}

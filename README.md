@@ -1,1 +1,0 @@
-# Bull-and-Bear-Trap-Identification-System

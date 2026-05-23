@@ -1542,3 +1542,361 @@ def render_trade_demo(symbol: str, current_price: float, prob: float):
             )) * e["qty"]
             for e in log if e["action"] == "BAN"
         )
+
+
+# ============================================================
+# 11. VOLUME PROFILE (VPVR) RENDER
+# ============================================================
+def render_vpvr(vp: pd.DataFrame, df_price: pd.DataFrame, poc_vah: dict):
+    """
+    Vẽ Volume Profile dạng histogram ngang bên cạnh biểu đồ giá.
+
+    Args:
+        vp: DataFrame từ analytics.compute_volume_profile().
+        df_price: DataFrame OHLCV để lấy range giá.
+        poc_vah: Dict {poc, vah, val}.
+    """
+    if vp.empty:
+        st.caption("Khong du du lieu VPVR.")
+        return
+
+    col_chart, col_info = st.columns([3, 1])
+
+    with col_chart:
+        # Màu: HVN đỏ, LVN xanh, bình thường xám
+        colors = []
+        for _, row in vp.iterrows():
+            if row["is_hvn"]:   colors.append("#ef4444")
+            elif row["is_lvn"]: colors.append("#22c55e")
+            else:               colors.append("#94a3b8")
+
+        fig_vp = go.Figure()
+        fig_vp.add_trace(go.Bar(
+            x=vp["volume"],
+            y=vp["price_level"],
+            orientation="h",
+            marker_color=colors,
+            name="Volume",
+            hovertemplate="Gia: %{y:,.0f}<br>Volume: %{x:,.0f}<extra></extra>",
+        ))
+
+        # POC line
+        fig_vp.add_hline(y=poc_vah["poc"], line_color="#ef4444",
+                          line_width=2, line_dash="solid",
+                          annotation_text=f"POC {poc_vah['poc']:,.0f}",
+                          annotation_font_color="#ef4444")
+        fig_vp.add_hline(y=poc_vah["vah"], line_color="#f59e0b",
+                          line_width=1.5, line_dash="dash",
+                          annotation_text=f"VAH {poc_vah['vah']:,.0f}",
+                          annotation_font_color="#f59e0b")
+        fig_vp.add_hline(y=poc_vah["val"], line_color="#3b82f6",
+                          line_width=1.5, line_dash="dash",
+                          annotation_text=f"VAL {poc_vah['val']:,.0f}",
+                          annotation_font_color="#3b82f6")
+
+        fig_vp.update_layout(
+            template="plotly_white",
+            paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
+            height=350,
+            margin=dict(t=20, b=20, l=70, r=20),
+            xaxis_title="Volume",
+            yaxis_title="Gia",
+            font=dict(family="Inter, Arial, sans-serif", color="#0f172a"),
+            showlegend=False,
+        )
+        fig_vp.update_xaxes(gridcolor="#f1f5f9")
+        fig_vp.update_yaxes(gridcolor="#f1f5f9")
+        st.plotly_chart(fig_vp, use_container_width=True)
+
+    with col_info:
+        st.markdown(f"""
+        <div class="rec-box" style="padding:14px; margin-top:0;">
+            <div class="metric-label">VPVR Key Levels</div>
+            <br>
+            <div style="font-size:12px; margin-bottom:8px;">
+                <span style="color:#ef4444; font-weight:600;">POC</span>
+                (Nhieu GD nhat)<br>
+                <strong>{poc_vah['poc']:,.0f}</strong>
+            </div>
+            <div style="font-size:12px; margin-bottom:8px;">
+                <span style="color:#f59e0b; font-weight:600;">VAH</span>
+                (Value Area High)<br>
+                <strong>{poc_vah['vah']:,.0f}</strong>
+            </div>
+            <div style="font-size:12px; margin-bottom:16px;">
+                <span style="color:#3b82f6; font-weight:600;">VAL</span>
+                (Value Area Low)<br>
+                <strong>{poc_vah['val']:,.0f}</strong>
+            </div>
+            <div style="font-size:11px; color:#94a3b8; line-height:1.5;">
+                <span style="color:#ef4444;">HVN</span> = Vung gia nhieu GD (khang cu/ho tro manh)<br>
+                <span style="color:#22c55e;">LVN</span> = Vung gia it GD (gia di chuyen nhanh)
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+# ============================================================
+# 12. RISK/REWARD CALCULATOR RENDER
+# ============================================================
+def render_risk_reward(rr: dict):
+    """
+    Hiển thị R/R Calculator dạng thẻ trực quan.
+
+    Args:
+        rr: Dict từ analytics.calculate_risk_reward().
+    """
+    if not rr:
+        st.caption("Khong du du lieu tinh R/R.")
+        return
+
+    rr_color = "#16a34a" if rr["rr_ratio"] >= 2 else \
+               ("#d97706" if rr["rr_ratio"] >= 1 else "#dc2626")
+    rr_label = "Tot" if rr["rr_ratio"] >= 2 else \
+               ("Chap nhan" if rr["rr_ratio"] >= 1 else "Qua rui ro")
+
+    st.markdown(f"""
+    <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin:12px 0;">
+        <div class="metric-card neutral">
+            <div class="metric-label">Entry</div>
+            <div class="metric-value" style="font-size:16px;">{rr['entry_price']:,.0f}</div>
+            <div class="metric-sub">Gia vao lenh</div>
+        </div>
+        <div class="metric-card danger">
+            <div class="metric-label">Stop Loss</div>
+            <div class="metric-value" style="font-size:16px; color:#dc2626;">{rr['stop_loss']:,.0f}</div>
+            <div class="metric-sub">-{rr['sl_pct']:.1f}% | {rr['sl_source']}</div>
+        </div>
+        <div class="metric-card safe">
+            <div class="metric-label">Take Profit</div>
+            <div class="metric-value" style="font-size:16px; color:#16a34a;">{rr['take_profit']:,.0f}</div>
+            <div class="metric-sub">+{rr['tp_pct']:.1f}% | {rr['tp_source']}</div>
+        </div>
+        <div class="metric-card {'safe' if rr['rr_ratio'] >= 2 else 'warning'}">
+            <div class="metric-label">R:R Ratio</div>
+            <div class="metric-value" style="color:{rr_color};">1:{rr['rr_ratio']:.1f}</div>
+            <div class="metric-sub">{rr_label}</div>
+        </div>
+        <div class="metric-card neutral">
+            <div class="metric-label">Vi the (~1ty)</div>
+            <div class="metric-value" style="font-size:16px;">{rr['position_size']:,}</div>
+            <div class="metric-sub">cp | Lo toi da: {rr['est_max_loss']/1e6:.1f}M</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ============================================================
+# 13. SCANNER TABLE RENDER
+# ============================================================
+def render_scanner_table(df_scan: pd.DataFrame):
+    """
+    Hiển thị bảng scanner VN30 với màu sắc theo mức rủi ro.
+
+    Args:
+        df_scan: DataFrame từ analytics.scan_vn30().
+    """
+    if df_scan is None or df_scan.empty:
+        st.info("Chua co du lieu scanner. Bam 'Quet ngay' de bat dau.")
+        return
+
+    st.markdown(f"**{len(df_scan)} ma duoc quet** — Sort theo Bull Trap % giam dan")
+
+    # Tô màu theo Signal
+    def color_signal(val):
+        colors = {
+            "SELL / AVOID": "background-color:#fef2f2; color:#991b1b; font-weight:600;",
+            "CAUTION":      "background-color:#fffbeb; color:#92400e; font-weight:600;",
+            "REVERSAL?":    "background-color:#eff6ff; color:#1e40af; font-weight:600;",
+            "BUY SIGNAL":   "background-color:#f0fdf4; color:#166534; font-weight:600;",
+            "NEUTRAL":      "color:#64748b;",
+        }
+        return colors.get(val, "")
+
+    def color_bull(val):
+        v = float(str(val).replace("%",""))
+        if v > 65: return "color:#dc2626; font-weight:700;"
+        if v > 50: return "color:#f97316; font-weight:600;"
+        if v < 30: return "color:#16a34a;"
+        return ""
+
+    styled = df_scan.style\
+        .applymap(color_signal, subset=["Signal"])\
+        .applymap(color_bull,   subset=["Bull_Trap_%"])
+
+    st.dataframe(styled, use_container_width=True, hide_index=True, height=500)
+
+    # Top 3 nguy hiểm nhất
+    top3 = df_scan[df_scan["Bull_Trap_%"] > 50].head(3)
+    if not top3.empty:
+        syms = ", ".join(top3["Symbol"].tolist())
+        st.markdown(f"""<div class="banner danger">
+            Top canh bao Bull Trap: <strong>{syms}</strong>
+        </div>""", unsafe_allow_html=True)
+
+
+# ============================================================
+# 14. FOREIGN FLOW RENDER
+# ============================================================
+def render_foreign_flow(df_ff: pd.DataFrame, symbol: str):
+    """
+    Vẽ biểu đồ dòng tiền khối ngoại.
+    Nếu không có dữ liệu, hiển thị thông báo phù hợp.
+
+    Args:
+        df_ff: DataFrame từ analytics.fetch_foreign_flow().
+        symbol: Mã cổ phiếu.
+    """
+    if df_ff is None or df_ff.empty:
+        st.markdown(f"""
+        <div class="banner info" style="font-size:13px;">
+            Khong tim thay bang du lieu khoi ngoai trong DB.
+            Can bang <code>foreign_flow</code> voi cot:
+            ticker, time, foreign_buy, foreign_sell.
+        </div>""", unsafe_allow_html=True)
+        return
+
+    fig = go.Figure()
+    if "NetForeign" in df_ff.columns:
+        colors = ["#16a34a" if v >= 0 else "#dc2626"
+                  for v in df_ff["NetForeign"]]
+        fig.add_trace(go.Bar(
+            x=df_ff.index, y=df_ff["NetForeign"],
+            name="Net Foreign",
+            marker_color=colors,
+            hovertemplate="<b>%{x}</b><br>Net: %{y:,.0f}<extra></extra>",
+        ))
+    if "ForeignBuy" in df_ff.columns:
+        fig.add_trace(go.Scatter(
+            x=df_ff.index, y=df_ff["ForeignBuy"].rolling(5).mean(),
+            name="Buy MA5", line=dict(color="#16a34a", width=1.5),
+        ))
+    if "ForeignSell" in df_ff.columns:
+        fig.add_trace(go.Scatter(
+            x=df_ff.index, y=df_ff["ForeignSell"].rolling(5).mean(),
+            name="Sell MA5", line=dict(color="#dc2626", width=1.5),
+        ))
+
+    fig.update_layout(
+        template="plotly_white",
+        paper_bgcolor="#ffffff", plot_bgcolor="#fafafa",
+        height=280,
+        title=f"Dong tien khoi ngoai — {symbol}",
+        hovermode="x unified",
+        margin=dict(t=40, b=20, l=60, r=20),
+        legend=dict(orientation="h", y=1.1),
+        font=dict(family="Inter, Arial, sans-serif", color="#0f172a"),
+    )
+    fig.update_xaxes(gridcolor="#f1f5f9")
+    fig.update_yaxes(gridcolor="#f1f5f9")
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# ============================================================
+# 15. MODEL PERFORMANCE RENDER
+# ============================================================
+def render_model_performance(perf: dict, symbol: str):
+    """
+    Hiển thị dashboard Model Performance Tracker.
+
+    Args:
+        perf: Dict từ analytics.compute_rolling_performance().
+        symbol: Mã cổ phiếu hiện tại.
+    """
+    if perf["n_verified"] == 0:
+        st.info(
+            "Chua du du lieu de tinh hieu suat. "
+            "He thong se tu dong verify du doan sau 5 phien giao dich. "
+            f"Du doan da ghi: {len(perf.get('recent_log', []))} muc."
+        )
+        return
+
+    acc = perf.get("accuracy",  0) or 0
+    pre = perf.get("precision", 0) or 0
+    rec = perf.get("recall",    0) or 0
+    f1  = perf.get("f1",        0) or 0
+
+    # KPI cards
+    st.markdown(f"""
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px;">
+        <div class="metric-card {'safe' if acc > 0.6 else 'warning'}">
+            <div class="metric-label">Accuracy (rolling 20)</div>
+            <div class="metric-value">{acc:.1%}</div>
+            <div class="metric-sub">Tong so du doan dung</div>
+        </div>
+        <div class="metric-card {'safe' if pre > 0.6 else 'warning'}">
+            <div class="metric-label">Precision (Trap)</div>
+            <div class="metric-value">{pre:.1%}</div>
+            <div class="metric-sub">Khi bao Trap, dung bao nhieu %</div>
+        </div>
+        <div class="metric-card {'safe' if rec > 0.6 else 'warning'}">
+            <div class="metric-label">Recall (Trap)</div>
+            <div class="metric-value">{rec:.1%}</div>
+            <div class="metric-sub">Bat duoc bao nhieu % Trap that</div>
+        </div>
+        <div class="metric-card {'safe' if f1 > 0.6 else 'warning'}">
+            <div class="metric-label">F1 Score</div>
+            <div class="metric-value">{f1:.1%}</div>
+            <div class="metric-sub">N verified: {perf['n_verified']}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Confusion matrix mini
+    tp = perf.get("tp", 0)
+    fp = perf.get("fp", 0)
+    fn = perf.get("fn", 0)
+    tn = perf.get("tn", 0)
+
+    st.markdown(f"""
+    <div class="rec-box">
+        <h3>Confusion Matrix (rolling 20 du doan gan nhat)</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; max-width:300px; margin-top:12px;">
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;
+                        padding:12px; text-align:center;">
+                <div style="font-size:10px; color:#64748b;">True Positive</div>
+                <div style="font-size:24px; font-weight:700; color:#16a34a;">{tp}</div>
+            </div>
+            <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px;
+                        padding:12px; text-align:center;">
+                <div style="font-size:10px; color:#64748b;">False Positive</div>
+                <div style="font-size:24px; font-weight:700; color:#dc2626;">{fp}</div>
+            </div>
+            <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px;
+                        padding:12px; text-align:center;">
+                <div style="font-size:10px; color:#64748b;">False Negative</div>
+                <div style="font-size:24px; font-weight:700; color:#d97706;">{fn}</div>
+            </div>
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;
+                        padding:12px; text-align:center;">
+                <div style="font-size:10px; color:#64748b;">True Negative</div>
+                <div style="font-size:24px; font-weight:700; color:#16a34a;">{tn}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Bảng log gần nhất
+    if perf.get("recent_log"):
+        st.markdown("**Lich su du doan da verify (20 gan nhat):**")
+        log_rows = []
+        for e in reversed(perf["recent_log"]):
+            correct = e["predicted"] == e["actual"]
+            log_rows.append({
+                "Ngay":      e["date"],
+                "Ma":        e["symbol"],
+                "Xac suat":  f"{e['prob']:.1%}",
+                "Du doan":   "Trap" if e["predicted"] == 1 else "That",
+                "Thuc te":   "Trap" if e["actual"]    == 1 else "That",
+                "Ket qua":   "Dung" if correct else "Sai",
+            })
+        df_log = pd.DataFrame(log_rows)
+
+        def color_result(val):
+            return "color:#16a34a; font-weight:600;" if val == "Dung" \
+                   else "color:#dc2626; font-weight:600;"
+
+        st.dataframe(
+            df_log.style.applymap(color_result, subset=["Ket qua"]),
+            use_container_width=True, hide_index=True,
+        )

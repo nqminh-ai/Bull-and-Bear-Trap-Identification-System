@@ -1,0 +1,9 @@
+{
+  "auc_roc": 0.875,
+  "precision_trap": 1.0,
+  "recall_trap": 0.5,
+  "f1_trap": 0.6667,
+  "accuracy": 0.8333,
+  "trained_at": "2026-05-23T15:20:55.460978",
+  "version": "models\\versions\\VNM_bear_20260523_152055.pkl"
+}

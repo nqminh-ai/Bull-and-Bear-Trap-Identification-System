@@ -1,0 +1,9 @@
+{
+  "auc_roc": 0.375,
+  "precision_trap": 0.6,
+  "recall_trap": 0.75,
+  "f1_trap": 0.6667,
+  "accuracy": 0.5,
+  "trained_at": "2026-05-23T15:20:50.110800",
+  "version": "models\\versions\\MBB_bear_20260523_152050.pkl"
+}
